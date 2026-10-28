@@ -1,1 +1,596 @@
-x
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estação Ambiental · Painel</title>
+<style>
+  :root {
+    --bg: #f4f5f1;
+    --surface: #ffffff;
+    --surface-2: #eef0ea;
+    --ink: #1c2321;
+    --ink-2: #55605b;
+    --line: #dde1d8;
+    --accent: #1f6f5c;
+    --accent-ink: #ffffff;
+    --ok: #2f9e5b;
+    --warn: #e0a321;
+    --alarm: #d6453d;
+    --off: #9aa39e;
+    --temp: #d6643d;
+    --umid: #2f7fc1;
+    --luz: #c9a227;
+    --shadow: 0 1px 2px rgba(20, 30, 25, .06), 0 8px 24px rgba(20, 30, 25, .06);
+    --radius: 14px;
+    --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101513;
+      --surface: #171e1b;
+      --surface-2: #1f2824;
+      --ink: #e8ece9;
+      --ink-2: #9aa7a1;
+      --line: #2a3530;
+      --accent: #4cc39f;
+      --accent-ink: #0d1411;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  a { color: var(--accent); }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+
+  header {
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .bar { display: flex; align-items: center; gap: 12px; padding: 12px 0; flex-wrap: wrap; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; letter-spacing: -.01em; }
+  .logo svg { flex: none; }
+  .logo small { display: block; font-weight: 500; font-size: 12px; color: var(--ink-2); letter-spacing: 0; }
+  .spacer { flex: 1; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; padding: 5px 10px; border-radius: 999px;
+    background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--off); }
+  .dot.ok { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+  .dot.bad { background: var(--alarm); }
+  .btn {
+    font: inherit; font-weight: 600; font-size: 14px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+    padding: 8px 14px; border-radius: 10px; cursor: pointer; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn:hover { border-color: var(--ink-2); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.primary:hover { filter: brightness(1.05); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+
+  main { padding: 28px 16px 48px; display: grid; gap: 20px; }
+  .grid { display: grid; gap: 20px; grid-template-columns: repeat(12, 1fr); align-items: start; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 20px; min-width: 0;
+  }
+  .span-12 { grid-column: span 12; } .span-7 { grid-column: span 7; } .span-5 { grid-column: span 5; }
+  .span-8 { grid-column: span 8; } .span-4 { grid-column: span 4; } .span-6 { grid-column: span 6; }
+  @media (max-width: 900px) { .span-7, .span-5, .span-8, .span-4, .span-6 { grid-column: span 12; } }
+
+  h2 { font-size: 16px; margin: 0 0 4px; letter-spacing: -.01em; }
+  .sub { color: var(--ink-2); font-size: 13px; margin: 0 0 16px; }
+  .card-head { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .card-head > div:first-child { flex: 1; min-width: 200px; }
+
+  /* Estado atual */
+  .status {
+    display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center;
+  }
+  @media (max-width: 560px) { .status { grid-template-columns: 1fr; } }
+  .leds { display: flex; gap: 14px; padding: 16px 18px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); }
+  .led { display: grid; justify-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--ink-2); letter-spacing: .04em; }
+  .led i {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: color-mix(in srgb, var(--c) 18%, var(--surface));
+    border: 2px solid color-mix(in srgb, var(--c) 40%, transparent);
+    transition: all .25s;
+  }
+  .led.on i { background: var(--c); border-color: var(--c); box-shadow: 0 0 18px 2px color-mix(in srgb, var(--c) 60%, transparent); }
+  .led.on { color: var(--ink); }
+  .state-title { font-size: 30px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+  .state-desc { color: var(--ink-2); margin-top: 4px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .chip { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2); }
+  .chip.hot { color: var(--alarm); border-color: color-mix(in srgb, var(--alarm) 40%, transparent); background: color-mix(in srgb, var(--alarm) 8%, var(--surface)); }
+
+  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 20px; }
+  @media (max-width: 560px) { .metrics { grid-template-columns: 1fr; } }
+  .metric { padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
+  .metric .k { font-size: 12px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+  .metric .k b { width: 8px; height: 8px; border-radius: 2px; background: var(--c); display: inline-block; }
+  .metric .v { font-size: 26px; font-weight: 750; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .metric .v small { font-size: 14px; font-weight: 600; color: var(--ink-2); margin-left: 2px; }
+  .gauge { position: relative; height: 6px; border-radius: 3px; background: var(--surface-2); margin-top: 8px; overflow: visible; }
+  .gauge span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--c); transition: width .3s; }
+  .gauge em { position: absolute; top: -4px; width: 2px; height: 14px; background: var(--ink); opacity: .55; }
+  .metric .lim { font-size: 11px; color: var(--ink-2); margin-top: 6px; }
+  .meta { font-size: 12px; color: var(--ink-2); margin-top: 14px; }
+
+  /* Simulador */
+  .field { margin-bottom: 14px; }
+  .field-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
+  .field-top label { font-weight: 600; }
+  .field-top output { font-family: var(--mono); font-size: 13px; color: var(--ink-2); }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .switch { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 13px; margin: 6px 0 14px; cursor: pointer; }
+  .switch input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .cases { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .cases button { font: inherit; font-size: 12px; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); cursor: pointer; }
+  .cases button:hover { border-color: var(--ink-2); }
+  .keyrow { display: flex; gap: 8px; margin-top: 4px; }
+  .keyrow input { flex: 1; min-width: 0; font: inherit; font-size: 13px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+  .msg { font-size: 13px; margin-top: 10px; min-height: 20px; }
+  .msg.err { color: var(--alarm); }
+  .msg.ok { color: var(--ok); }
+
+  /* Lógica */
+  .logic { display: grid; gap: 8px; }
+  .cond { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); font-size: 13px; }
+  .cond .bit { font-family: var(--mono); font-weight: 700; text-align: center; border-radius: 6px; padding: 2px 0; background: var(--surface-2); }
+  .cond.on { border-color: color-mix(in srgb, var(--alarm) 45%, transparent); background: color-mix(in srgb, var(--alarm) 6%, var(--surface)); }
+  .cond.on .bit { background: var(--alarm); color: #fff; }
+  .formula { font-family: var(--mono); font-size: 12px; color: var(--ink-2); background: var(--surface-2); border-radius: 10px; padding: 10px 12px; margin-top: 10px; line-height: 1.7; overflow-x: auto; white-space: nowrap; }
+  .formula b { color: var(--ink); }
+
+  /* Histórico */
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-2); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 14px; height: 3px; border-radius: 2px; background: var(--c); }
+  .chart { width: 100%; height: 260px; display: block; margin-top: 8px; }
+  .chart text { fill: var(--ink-2); font-size: 11px; font-family: system-ui, sans-serif; }
+  .chart .grid line { stroke: var(--line); }
+  .empty { color: var(--ink-2); font-size: 14px; padding: 40px 0; text-align: center; }
+  .table-wrap { overflow-x: auto; margin-top: 16px; border: 1px solid var(--line); border-radius: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 9px 12px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--line); }
+  td:last-child { white-space: normal; min-width: 140px; }
+  th { font-weight: 600; color: var(--ink-2); background: var(--surface-2); font-size: 12px; }
+  tr:last-child td { border-bottom: 0; }
+  td.num { font-variant-numeric: tabular-nums; text-align: right; }
+  th.num { text-align: right; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px; padding: 2px 9px; border-radius: 999px; }
+  .badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .b-normal { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+  .b-atencao { color: #b07d0e; background: color-mix(in srgb, var(--warn) 16%, transparent); }
+  .b-alarme { color: var(--alarm); background: color-mix(in srgb, var(--alarm) 12%, transparent); }
+  .b-desligado { color: var(--off); background: color-mix(in srgb, var(--off) 14%, transparent); }
+  @media (prefers-color-scheme: dark) { .b-atencao { color: var(--warn); } }
+
+  /* Otimização */
+  .opt-top { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end; }
+  @media (max-width: 560px) { .opt-top { grid-template-columns: 1fr; } }
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
+  @media (max-width: 560px) { .kpis { grid-template-columns: 1fr; } }
+  .kpi { padding: 12px 14px; border-radius: 12px; background: var(--surface-2); }
+  .kpi .k { font-size: 12px; color: var(--ink-2); }
+  .kpi .v { font-size: 22px; font-weight: 750; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .kpi .v.up { color: var(--ok); }
+  .sensor-row { display: grid; grid-template-columns: 110px 1fr 150px; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  @media (max-width: 560px) { .sensor-row { grid-template-columns: 1fr; gap: 4px; } }
+  .sensor-row .name { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .sensor-row .name b { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+  .track { position: relative; height: 22px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
+  .track span { position: absolute; left: 0; top: 0; bottom: 0; background: var(--c); border-radius: 6px; transition: width .35s; }
+  .track em { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ink); opacity: .5; }
+  .track label { position: absolute; left: 8px; top: 2px; font-size: 12px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .sensor-row .det { color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
+  @media (max-width: 560px) { .sensor-row .det { text-align: left; } }
+  .note { font-size: 12px; color: var(--ink-2); margin-top: 12px; }
+
+  footer { border-top: 1px solid var(--line); color: var(--ink-2); font-size: 12px; padding: 18px 0 28px; }
+  footer .wrap { display: flex; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap bar">
+    <div class="logo">
+      <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="9" fill="var(--accent)"/>
+        <circle cx="10" cy="20" r="3" fill="#2f9e5b" stroke="#fff" stroke-width="1.5"/>
+        <circle cx="16" cy="14" r="3" fill="#e0a321" stroke="#fff" stroke-width="1.5"/>
+        <circle cx="22" cy="20" r="3" fill="#d6453d" stroke="#fff" stroke-width="1.5"/>
+      </svg>
+      <div>Estação Ambiental<small>ExpoTech 2026.2 · Interface</small></div>
+    </div>
+    <div class="spacer"></div>
+    <span class="pill" id="api-pill"><span class="dot" id="api-dot"></span><span id="api-text">Conectando…</span></span>
+    <a class="btn" href="docs" target="_blank" rel="noopener">API (Swagger)</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="grid">
+    <!-- Estado atual -->
+    <section class="card span-7" aria-labelledby="t-estado">
+      <div class="card-head">
+        <div>
+          <h2 id="t-estado">Estado atual</h2>
+          <p class="sub">Última leitura registrada na nuvem. Atualiza sozinho a cada 10 s.</p>
+        </div>
+        <button class="btn" id="refresh">Atualizar</button>
+      </div>
+      <div class="status">
+        <div class="leds" aria-label="LEDs do circuito">
+          <div class="led" style="--c: var(--ok)" id="led-normal"><i></i>NORMAL</div>
+          <div class="led" style="--c: var(--warn)" id="led-atencao"><i></i>ATENÇÃO</div>
+          <div class="led" style="--c: var(--alarm)" id="led-alarme"><i></i>ALARME</div>
+        </div>
+        <div>
+          <div class="state-title" id="state-title">—</div>
+          <div class="state-desc" id="state-desc">Aguardando leituras.</div>
+          <div class="chips" id="state-chips"></div>
+        </div>
+      </div>
+      <div class="metrics">
+        <div class="metric" style="--c: var(--temp)">
+          <div class="k"><b></b>Temperatura</div>
+          <div class="v" id="m-temp">—<small>°C</small></div>
+          <div class="gauge"><span id="g-temp"></span><em id="l-temp"></em></div>
+          <div class="lim">Alerta acima de 30 °C</div>
+        </div>
+        <div class="metric" style="--c: var(--umid)">
+          <div class="k"><b></b>Umidade</div>
+          <div class="v" id="m-umid">—<small>%</small></div>
+          <div class="gauge"><span id="g-umid"></span><em id="l-umid"></em></div>
+          <div class="lim">Alerta abaixo de 30 %</div>
+        </div>
+        <div class="metric" style="--c: var(--luz)">
+          <div class="k"><b></b>Luminosidade</div>
+          <div class="v" id="m-luz">—<small>%</small></div>
+          <div class="gauge"><span id="g-luz"></span><em id="l-luz"></em></div>
+          <div class="lim">Alerta acima de 80 %</div>
+        </div>
+      </div>
+      <div class="meta" id="state-meta"></div>
+    </section>
+
+    <!-- Simulador -->
+    <section class="card span-5" aria-labelledby="t-sim">
+      <h2 id="t-sim">Simular uma leitura</h2>
+      <p class="sub">Ajuste os sensores ou carregue um dos 5 casos testados no circuito, e envie para a API.</p>
+      <div class="cases" id="cases"></div>
+      <div class="field">
+        <div class="field-top"><label for="s-temp">Temperatura</label><output id="o-temp"></output></div>
+        <input type="range" id="s-temp" min="-10" max="60" step="0.5" value="23">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="s-umid">Umidade</label><output id="o-umid"></output></div>
+        <input type="range" id="s-umid" min="0" max="100" step="1" value="32">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="s-luz">Luminosidade</label><output id="o-luz"></output></div>
+        <input type="range" id="s-luz" min="0" max="100" step="1" value="32">
+      </div>
+      <label class="switch"><input type="checkbox" id="s-en" checked> Estação ligada (EN)</label>
+      <label for="api-key" style="font-size:13px;font-weight:600">Chave da API</label>
+      <div class="keyrow">
+        <input type="password" id="api-key" placeholder="cole a API_KEY para enviar" autocomplete="off">
+        <button class="btn primary" id="send">Enviar para a nuvem</button>
+      </div>
+      <div class="msg" id="send-msg"></div>
+    </section>
+
+    <!-- Lógica do circuito -->
+    <section class="card span-5" aria-labelledby="t-logica">
+      <h2 id="t-logica">Lógica do circuito</h2>
+      <p class="sub">As mesmas regras do circuito no Logisim, aplicadas à leitura do simulador acima.</p>
+      <div class="logic">
+        <div class="cond" id="c-a"><span class="bit">0</span><span><b>A</b> · temperatura &gt; 30 °C</span><span id="c-a-v"></span></div>
+        <div class="cond" id="c-b"><span class="bit">0</span><span><b>B</b> · umidade &lt; 30 %</span><span id="c-b-v"></span></div>
+        <div class="cond" id="c-c"><span class="bit">0</span><span><b>C</b> · luminosidade &gt; 80 %</span><span id="c-c-v"></span></div>
+      </div>
+      <div class="formula">
+        <div><b>ALARME</b> = EN · (A·B + A·C + B·C) = <b id="f-alarme">0</b></div>
+        <div><b>ATENÇÃO</b> = EN · (A + B + C) · ALARME' = <b id="f-atencao">0</b></div>
+        <div><b>NORMAL</b> = EN · A' · B' · C' = <b id="f-normal">0</b></div>
+      </div>
+      <div class="leds" style="margin-top:14px; justify-content:center" aria-label="Prévia dos LEDs">
+        <div class="led" style="--c: var(--ok)" id="p-normal"><i></i>NORMAL</div>
+        <div class="led" style="--c: var(--warn)" id="p-atencao"><i></i>ATENÇÃO</div>
+        <div class="led" style="--c: var(--alarm)" id="p-alarme"><i></i>ALARME</div>
+      </div>
+    </section>
+
+    <!-- Histórico -->
+    <section class="card span-7" aria-labelledby="t-hist">
+      <div class="card-head">
+        <div>
+          <h2 id="t-hist">Histórico</h2>
+          <p class="sub">Últimas leituras guardadas no PostgreSQL da Azure.</p>
+        </div>
+        <div class="legend">
+          <span style="--c: var(--temp)"><i></i>Temperatura (°C)</span>
+          <span style="--c: var(--umid)"><i></i>Umidade (%)</span>
+          <span style="--c: var(--luz)"><i></i>Luminosidade (%)</span>
+        </div>
+      </div>
+      <div id="chart-box"><div class="empty">Sem leituras ainda.</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Quando</th><th class="num">Temp.</th><th class="num">Umid.</th><th class="num">Luz</th><th>Estado</th><th>Condições</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Otimização -->
+    <section class="card span-12" aria-labelledby="t-opt">
+      <div class="opt-top">
+        <div>
+          <h2 id="t-opt">Otimização de energia (Pesquisa Operacional)</h2>
+          <p class="sub" style="margin-bottom:8px">Programação linear: quantas leituras por hora cada sensor deve fazer para obter o máximo de informação
+            (pesos 3, 2 e 1) sem passar do orçamento de energia.</p>
+          <div class="field" style="margin:0">
+            <div class="field-top"><label for="budget">Orçamento de energia</label><output id="o-budget"></output></div>
+            <input type="range" id="budget" min="100" max="2000" step="10" value="1000">
+          </div>
+        </div>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><div class="k">Energia usada</div><div class="v" id="k-energia">—</div></div>
+        <div class="kpi"><div class="k">Valor da informação (otimizado × uniforme)</div><div class="v" id="k-valor">—</div></div>
+        <div class="kpi"><div class="k">Ganho sobre distribuir igual</div><div class="v up" id="k-ganho">—</div></div>
+      </div>
+      <div id="sensors"></div>
+      <div class="msg err" id="opt-msg"></div>
+      <p class="note">A barra mostra as leituras por hora de cada sensor; o traço marca o máximo permitido. Correntes e tempos de leitura vêm dos datasheets (LM35, DHT22, LDR) e estão no documento de física.</p>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Estação Ambiental · Matheus e Vitor · ExpoTech 2026.2</span>
+    <span>FastAPI · Azure Functions · Azure Database for PostgreSQL</span>
+  </div>
+</footer>
+
+<script>
+(() => {
+  "use strict";
+  const LIM = { temp: 30, umid: 30, luz: 80 };
+  const MAX_POR_HORA = { temperatura: 360, umidade: 120, luminosidade: 360 };
+  const NOMES = { temperatura: "Temperatura", umidade: "Umidade", luminosidade: "Luminosidade" };
+  const CORES = { temperatura: "var(--temp)", umidade: "var(--umid)", luminosidade: "var(--luz)" };
+  const ESTADOS = {
+    normal:    { t: "Normal",    d: "Nenhuma condição de risco. LED verde aceso." },
+    atencao:   { t: "Atenção",   d: "Uma condição de risco ativa. LED amarelo aceso." },
+    alarme:    { t: "Alarme",    d: "Duas ou mais condições de risco. LED vermelho aceso." },
+    desligado: { t: "Desligado", d: "Estação desligada (EN = 0). Nenhum LED aceso." },
+  };
+  const CONDICOES = { temperatura_alta: "Temperatura alta", umidade_baixa: "Umidade baixa", luz_excessiva: "Luz excessiva" };
+  // Os 5 casos testados no Logisim (valores em hexadecimal no circuito).
+  const CASOS = [
+    { n: "1 · Normal",            t: 0x17, u: 0x20, l: 0x20, en: true },
+    { n: "2 · Atenção (temp.)",   t: 0x23, u: 0x20, l: 0x20, en: true },
+    { n: "3 · Atenção (umid.)",   t: 0x17, u: 0x0E, l: 0x20, en: true },
+    { n: "4 · Alarme",            t: 0x23, u: 0x0E, l: 0x20, en: true },
+    { n: "5 · Desligado",         t: 0x23, u: 0x0E, l: 0x20, en: false },
+  ];
+
+  const $ = (id) => document.getElementById(id);
+  const fmt = (n, d = 1) => Number(n).toLocaleString("pt-BR", { maximumFractionDigits: d, minimumFractionDigits: 0 });
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  async function api(path, opts) {
+    const r = await fetch(path, opts);
+    let body = null;
+    try { body = await r.json(); } catch (_) { /* sem corpo */ }
+    if (!r.ok) {
+      const det = body && body.detail;
+      const msg = Array.isArray(det) ? det.map((d) => d.msg).join("; ") : (det || `Erro ${r.status}`);
+      const e = new Error(msg); e.status = r.status; throw e;
+    }
+    return body;
+  }
+
+  // ---------- Lógica do circuito (espelho das regras do backend) ----------
+  function classify(t, u, l, en) {
+    const A = t > LIM.temp, B = u < LIM.umid, C = l > LIM.luz;
+    if (!en) return { A, B, C, estado: "desligado" };
+    const n = A + B + C;
+    return { A, B, C, estado: n === 0 ? "normal" : n === 1 ? "atencao" : "alarme" };
+  }
+  function setLeds(prefix, estado) {
+    for (const k of ["normal", "atencao", "alarme"]) $(`${prefix}-${k}`).classList.toggle("on", estado === k);
+  }
+
+  // ---------- Simulador ----------
+  const sT = $("s-temp"), sU = $("s-umid"), sL = $("s-luz"), sEN = $("s-en");
+  function updateSim() {
+    const t = +sT.value, u = +sU.value, l = +sL.value, en = sEN.checked;
+    $("o-temp").textContent = `${fmt(t)} °C`;
+    $("o-umid").textContent = `${fmt(u, 0)} %`;
+    $("o-luz").textContent = `${fmt(l, 0)} %`;
+    const r = classify(t, u, l, en);
+    [["a", r.A, `${fmt(t)} °C`], ["b", r.B, `${fmt(u, 0)} %`], ["c", r.C, `${fmt(l, 0)} %`]].forEach(([k, on, v]) => {
+      const el = $(`c-${k}`);
+      el.classList.toggle("on", on);
+      el.querySelector(".bit").textContent = on ? "1" : "0";
+      $(`c-${k}-v`).textContent = v;
+    });
+    const EN = en ? 1 : 0, A = +r.A, B = +r.B, C = +r.C;
+    const alarme = EN & ((A & B) | (A & C) | (B & C));
+    const atencao = EN & (A | B | C) & (alarme ^ 1);
+    const normal = EN & (A ^ 1) & (B ^ 1) & (C ^ 1);
+    $("f-alarme").textContent = alarme; $("f-atencao").textContent = atencao; $("f-normal").textContent = normal;
+    setLeds("p", r.estado);
+  }
+  [sT, sU, sL, sEN].forEach((el) => el.addEventListener("input", updateSim));
+  CASOS.forEach((c) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = c.n;
+    b.addEventListener("click", () => { sT.value = c.t; sU.value = c.u; sL.value = c.l; sEN.checked = c.en; updateSim(); });
+    $("cases").appendChild(b);
+  });
+
+  const keyInput = $("api-key");
+  try { keyInput.value = sessionStorage.getItem("estacao_api_key") || ""; } catch (_) {}
+  keyInput.addEventListener("change", () => { try { sessionStorage.setItem("estacao_api_key", keyInput.value); } catch (_) {} });
+
+  $("send").addEventListener("click", async () => {
+    const msg = $("send-msg");
+    msg.className = "msg"; msg.textContent = "Enviando…";
+    $("send").disabled = true;
+    try {
+      const body = { temperatura: +sT.value, umidade: +sU.value, luminosidade: +sL.value, ligada: sEN.checked };
+      const r = await api("readings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-API-Key": keyInput.value.trim() },
+        body: JSON.stringify(body),
+      });
+      const previsto = classify(body.temperatura, body.umidade, body.luminosidade, body.ligada).estado;
+      msg.className = "msg ok";
+      msg.textContent = `Leitura #${r.id} gravada: ${ESTADOS[r.estado].t}` + (r.estado === previsto ? " (igual ao circuito)." : ` (o circuito previa ${ESTADOS[previsto].t}).`);
+      loadReadings();
+    } catch (e) {
+      msg.className = "msg err";
+      msg.textContent = e.status === 401 ? "Chave da API inválida ou vazia." : `Não foi possível enviar: ${e.message}`;
+    } finally {
+      $("send").disabled = false;
+    }
+  });
+
+  // ---------- Estado atual + histórico ----------
+  function setGauge(id, limId, value, min, max, lim) {
+    const pct = (v) => Math.max(0, Math.min(100, ((v - min) / (max - min)) * 100));
+    $(id).style.width = value == null ? "0%" : pct(value) + "%";
+    $(limId).style.left = pct(lim) + "%";
+  }
+  function renderCurrent(r) {
+    if (!r) {
+      setLeds("led", null);
+      $("state-title").textContent = "—";
+      $("state-desc").textContent = "Nenhuma leitura registrada ainda. Envie uma pelo simulador.";
+      setGauge("g-temp", "l-temp", null, -10, 60, LIM.temp);
+      setGauge("g-umid", "l-umid", null, 0, 100, LIM.umid);
+      setGauge("g-luz", "l-luz", null, 0, 100, LIM.luz);
+      return;
+    }
+    const e = ESTADOS[r.estado] || { t: r.estado, d: "" };
+    setLeds("led", r.estado);
+    $("state-title").textContent = e.t;
+    $("state-title").style.color = { normal: "var(--ok)", atencao: "var(--warn)", alarme: "var(--alarm)", desligado: "var(--off)" }[r.estado];
+    $("state-desc").textContent = e.d;
+    $("state-chips").innerHTML = r.condicoes.map((c) => `<span class="chip hot">${esc(CONDICOES[c] || c)}</span>`).join("");
+    $("m-temp").innerHTML = `${fmt(r.temperatura)}<small>°C</small>`;
+    $("m-umid").innerHTML = `${fmt(r.umidade, 0)}<small>%</small>`;
+    $("m-luz").innerHTML = `${fmt(r.luminosidade, 0)}<small>%</small>`;
+    setGauge("g-temp", "l-temp", r.temperatura, -10, 60, LIM.temp);
+    setGauge("g-umid", "l-umid", r.umidade, 0, 100, LIM.umid);
+    setGauge("g-luz", "l-luz", r.luminosidade, 0, 100, LIM.luz);
+    $("state-meta").textContent = `Leitura #${r.id} · ${new Date(r.criado_em).toLocaleString("pt-BR")}`;
+  }
+
+  function renderChart(items) {
+    const box = $("chart-box");
+    if (items.length < 2) { box.innerHTML = '<div class="empty">Envie pelo menos duas leituras para ver o gráfico.</div>'; return; }
+    const data = items.slice().reverse();
+    const W = 720, H = 260, L = 36, R = 12, T = 12, B = 28;
+    const x = (i) => L + (i * (W - L - R)) / (data.length - 1);
+    const y = (v) => T + (1 - v / 100) * (H - T - B);
+    const line = (key, color) => {
+      const d = data.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(Math.max(0, Math.min(100, p[key]))).toFixed(1)}`).join("");
+      const dots = data.length <= 40 ? data.map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(Math.max(0, Math.min(100, p[key]))).toFixed(1)}" r="2.6" fill="${color}"><title>#${p.id}: ${fmt(p[key])}</title></circle>`).join("") : "";
+      return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>${dots}`;
+    };
+    const ticks = [0, 25, 50, 75, 100].map((v) => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+    const step = Math.max(1, Math.ceil(data.length / 8));
+    const xl = data.map((p, i) => (i % step === 0 || i === data.length - 1) ? `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">#${p.id}</text>` : "").join("");
+    const lim = (v, color) => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${color}" stroke-dasharray="4 4" opacity=".55"/>`;
+    box.innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Gráfico das últimas leituras">
+      <g class="grid">${ticks}</g>${lim(LIM.temp, "var(--temp)")}${lim(LIM.luz, "var(--luz)")}
+      ${line("umidade", "var(--umid)")}${line("luminosidade", "var(--luz)")}${line("temperatura", "var(--temp)")}${xl}</svg>`;
+  }
+
+  function renderTable(items) {
+    const tb = $("rows");
+    if (!items.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma leitura ainda.</td></tr>'; return; }
+    tb.innerHTML = items.slice(0, 12).map((r) => `<tr>
+      <td>${r.id}</td>
+      <td>${esc(new Date(r.criado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "medium" }))}</td>
+      <td class="num">${fmt(r.temperatura)} °C</td>
+      <td class="num">${fmt(r.umidade, 0)} %</td>
+      <td class="num">${fmt(r.luminosidade, 0)} %</td>
+      <td><span class="badge b-${esc(r.estado)}">${esc((ESTADOS[r.estado] || { t: r.estado }).t)}</span></td>
+      <td>${r.condicoes.map((c) => esc(CONDICOES[c] || c)).join(", ") || "—"}</td></tr>`).join("");
+  }
+
+  async function loadReadings() {
+    try {
+      const items = await api("readings?limit=50");
+      renderCurrent(items[0]);
+      renderChart(items);
+      renderTable(items);
+    } catch (e) {
+      $("rows").innerHTML = `<tr><td colspan="7" class="empty">Não foi possível carregar: ${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  // ---------- Otimização ----------
+  const budget = $("budget");
+  let optTimer = null;
+  async function loadSchedule() {
+    $("o-budget").textContent = `${fmt(budget.value, 0)} mJ/h`;
+    try {
+      const s = await api(`optimization/schedule?orcamento_mj_hora=${budget.value}`);
+      $("opt-msg").textContent = "";
+      $("k-energia").textContent = `${fmt(s.energia_total_mj_hora)} mJ/h`;
+      $("k-valor").textContent = `${fmt(s.valor_otimizado, 0)} × ${fmt(s.valor_uniforme, 0)}`;
+      $("k-ganho").textContent = `+${fmt(s.ganho_percentual)} %`;
+      $("sensors").innerHTML = s.sensores.map((x) => {
+        const max = MAX_POR_HORA[x.nome] || x.leituras_por_hora;
+        const pct = Math.min(100, (x.leituras_por_hora / max) * 100);
+        return `<div class="sensor-row" style="--c: ${CORES[x.nome] || "var(--accent)"}">
+          <div class="name"><b></b>${esc(NOMES[x.nome] || x.nome)}</div>
+          <div class="track"><span style="width:${pct}%"></span><em style="left:calc(100% - 2px)"></em><label>${fmt(x.leituras_por_hora)} leituras/h</label></div>
+          <div class="det">a cada ${fmt(x.intervalo_s)} s · ${fmt(x.energia_mj_hora)} mJ/h</div></div>`;
+      }).join("");
+    } catch (e) {
+      $("opt-msg").textContent = e.message;
+    }
+  }
+  budget.addEventListener("input", () => { $("o-budget").textContent = `${fmt(budget.value, 0)} mJ/h`; clearTimeout(optTimer); optTimer = setTimeout(loadSchedule, 200); });
+
+  // ---------- Saúde da API ----------
+  async function health() {
+    try {
+      await api("health");
+      $("api-dot").className = "dot ok"; $("api-text").textContent = "API online";
+    } catch (_) {
+      $("api-dot").className = "dot bad"; $("api-text").textContent = "API fora do ar";
+    }
+  }
+
+  $("refresh").addEventListener("click", loadReadings);
+  updateSim();
+  health();
+  loadReadings();
+  loadSchedule();
+  setInterval(loadReadings, 10000);
+  setInterval(health, 30000);
+})();
+</script>
+</body>
+</html>
