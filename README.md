@@ -28,7 +28,10 @@ expotech/
 │   └── Padrões de Projeto e SOLID ... .docx
 ├── integracao/
 │   └── enviar_casos.py      envia os 5 casos do circuito para a API
-├── .github/workflows/ci-cd.yml   testes + publicação automática na Azure
+├── segredos-azure.txt       chave da API e senha do banco (só no seu PC, nunca no GitHub)
+├── testar.bat               teste com dois cliques (Windows)
+├── ci-cd.yml                testes + publicação automática na Azure
+│                            (no GitHub fica em .github/workflows/ci-cd.yml)
 ├── Arquitetura C4 - ....pdf         diagramas C4 (contexto, contêineres, componentes)
 └── Circuito e Física - ....pdf      circuito, tabela-verdade e cálculos de física
 ```
@@ -80,7 +83,10 @@ Variáveis: leituras por hora de cada sensor. Objetivo: maximizar `3·temperatur
 naturalmente). Restrições: energia total ≤ orçamento por hora, e mínimo/máximo de leituras por sensor.
 A API devolve a frequência ótima e a compara com uma distribuição uniforme.
 
-## Rodar no seu PC (Windows, PowerShell)
+## Rodar no seu PC (Windows)
+
+Atalho: dê dois cliques em `testar.bat` (cria o ambiente, instala, roda os testes e, se você colar a
+`API_KEY`, confere os 5 casos contra a Azure). Ou, no PowerShell:
 
 ```powershell
 cd C:\Users\j_exp\Desktop\expotech\backend
@@ -125,8 +131,9 @@ Os 5 testes pulados no PC são os do PostgreSQL. Eles rodam de verdade no GitHub
   Os valores ficam no arquivo `segredos-azure.txt` do seu PC (fora do GitHub).
 - O banco só aceita conexões de serviços da Azure (regra de firewall "permitir serviços da Azure").
 
-Testes feitos na nuvem em 28/10/2026: os 51 testes passaram contra o PostgreSQL da Azure (num banco
-separado, `estacao_teste`), e `enviar_casos.py` contra a API publicada deu 5 de 5.
+Testes feitos em 28/10/2026: todos os testes passaram contra o PostgreSQL da Azure (num banco
+separado, `estacao_teste`); em um PC com Windows rodam 52 testes (47 + 5 do PostgreSQL pulados);
+e `enviar_casos.py` contra a API publicada deu 5 de 5.
 
 Para testar você mesmo (PowerShell, na pasta integracao):
 
@@ -137,19 +144,20 @@ $env:API_KEY = "<API_KEY do arquivo segredos-azure.txt>"
 
 ### CI/CD (GitHub Actions)
 
-1. Crie o repositório no GitHub e envie esta pasta (o `.gitignore` já deixa de fora `.env`, `.venv` e bancos locais).
-2. Coloque o arquivo `ci-cd.yml` em `.github/workflows/ci-cd.yml`. O jeito mais fácil: no site do GitHub,
-   *Add file > Create new file*, digite o nome `.github/workflows/ci-cd.yml` e cole o conteúdo.
+1. O repositório já existe no GitHub (o `.gitignore` deixa de fora `.env`, `.venv` e bancos locais) e o
+   workflow já está em `.github/workflows/ci-cd.yml`: os testes rodam a cada push.
+2. Para ligar a publicação automática, faça os passos 3 e 4 (um segredo, uma vez só).
 3. No portal da Azure, abra `estacao-api-87rj` > *Obter perfil de publicação* e baixe o arquivo.
 4. No GitHub, em *Settings > Secrets and variables > Actions*, crie o segredo
    `AZURE_FUNCTIONAPP_PUBLISH_PROFILE` com o conteúdo desse arquivo.
 5. A cada push na `main`, o Actions roda os testes (com um PostgreSQL próprio) e, se passarem, publica a API.
+   Sem o segredo, o pipeline fica verde e apenas pula a publicação.
 
 ### Prazo da conta gratuita
 
-A conta é uma avaliação de 30 dias, com crédito. Para os recursos continuarem no ar no evento (28/11),
-a assinatura precisa ser convertida para pagamento conforme o uso antes do fim da avaliação. O banco
-B1ms continua gratuito por 12 meses (750 h/mês) depois da conversão; a Function App, a conta de
-armazenamento e o Application Insights custam centavos com o uso de um projeto como este.
+A conta é uma avaliação de 30 dias (até cerca de 26/11/2026), suficiente para a entrega do vídeo (3/11)
+e a avaliação individual (09 a 13/11). Se a equipe for chamada para o evento (28/11), o projeto é
+recriado em outra conta da Azure seguindo os comandos desta seção: o código não muda, só os nomes e os
+valores das variáveis de ambiente.
 
 Nunca coloque senha ou chave no código nem no GitHub: elas só existem nas variáveis de ambiente.
