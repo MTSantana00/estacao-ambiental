@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+httpx
+# Driver do PostgreSQL (Azure). Só é usado quando DATABASE_URL está definida.
+# No Python 3.15 (seu PC) ele ainda pode não ter pacote pronto, então fica de fora lá;
+# a Azure roda Python 3.12, onde ele é instalado normalmente.
+psycopg[binary]; python_version < "3.15"
+# Ponte entre a Azure Functions e o FastAPI (só é usada na Azure).
+azure-functions
