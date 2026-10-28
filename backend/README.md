@@ -11,7 +11,7 @@ pip install -r requirements.txt
 $env:API_KEY="minha-chave-local"   # PowerShell  (Linux/Mac: export API_KEY=minha-chave-local)
 uvicorn app.main:app --reload
 ```
-Abra http://localhost:8000/docs: a tela interativa (Swagger) serve de interface para testar e demonstrar.
+Abra http://localhost:8000/ (painel) e http://localhost:8000/docs (tela interativa Swagger).
 
 ## Testes
 ```
@@ -22,6 +22,7 @@ Os testes HTTP (`tests/test_api.py`) só rodam com `fastapi` e `httpx` instalado
 ## Endpoints
 | Método | Rota | Auth | O que faz |
 |---|---|---|---|
+| GET | `/` | não | Painel web (estado atual, simulador, histórico e otimização) |
 | GET | `/health` | não | Verifica se a API está no ar |
 | POST | `/readings` | header `X-API-Key` | Registra leitura e devolve o estado (201) |
 | GET | `/readings?limit=50` | não | Últimas leituras, mais recente primeiro (limit 1 a 500) |
