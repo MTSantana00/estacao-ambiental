@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Bancos locais e segredos (NUNCA vão para o GitHub)
+*.db
+.env
+
+# Cópias baixadas
+*.zip
+
+# Azure Functions (local)
+local.settings.json
+
+# Segredos do projeto
+segredos-azure.txt
