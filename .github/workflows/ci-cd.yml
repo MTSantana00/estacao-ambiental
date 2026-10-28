@@ -50,9 +50,16 @@ jobs:
     needs: testes
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    env:
+      TEM_PERFIL: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE != '' }}
     steps:
+      - name: Aviso se o segredo ainda não foi cadastrado
+        if: env.TEM_PERFIL != 'true'
+        run: echo "::warning::Cadastre o segredo AZURE_FUNCTIONAPP_PUBLISH_PROFILE para ativar o deploy automático."
       - uses: actions/checkout@v4
+        if: env.TEM_PERFIL == 'true'
       - name: Publicar na Azure Functions
+        if: env.TEM_PERFIL == 'true'
         uses: Azure/functions-action@v1
         with:
           app-name: estacao-api-87rj
