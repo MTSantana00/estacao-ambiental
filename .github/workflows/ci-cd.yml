@@ -1,1 +1,62 @@
-# x
+# CI/CD da Estação Ambiental.
+# - Em todo push e pull request: instala as dependências e roda TODOS os testes,
+#   inclusive os do PostgreSQL (o GitHub sobe um PostgreSQL 16 só para o teste).
+# - Em push na branch main, se os testes passarem: publica a pasta backend na Azure Functions
+#   (plano de consumo flexível), a mesma usada hoje: estacao-api-87rj.
+#
+# Configuração necessária no GitHub (Settings > Secrets and variables > Actions):
+#   Segredo   AZURE_FUNCTIONAPP_PUBLISH_PROFILE = conteúdo do "perfil de publicação" da Function App
+#             (portal > estacao-api-87rj > Visão geral > Obter perfil de publicação)
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+      - name: Rodar os testes (SQLite + PostgreSQL + HTTP)
+        env:
+          API_KEY: chave-usada-so-no-teste
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+        run: python -m unittest -v
+
+  deploy:
+    needs: testes
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publicar na Azure Functions
+        uses: Azure/functions-action@v1
+        with:
+          app-name: estacao-api-87rj
+          package: backend
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+          sku: flexconsumption
+          remote-build: true
