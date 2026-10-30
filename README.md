@@ -1,6 +1,6 @@
 # Estação Ambiental (ExpoTech 2026.2, categoria Interface)
 
-Equipe: Matheus e Vitor.
+Equipe: Matheus, Gheovanne e Vitor.
 
 Uma estação que lê **temperatura, umidade e luminosidade**. Um circuito digital
 (simulado no Logisim) acende um LED verde, amarelo ou vermelho conforme o risco. As leituras
