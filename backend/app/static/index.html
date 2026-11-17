@@ -125,6 +125,11 @@
   .gauge em { position: absolute; top: -4px; width: 2px; height: 14px; background: var(--ink); opacity: .55; }
   .metric .lim { font-size: 11px; color: var(--ink-2); margin-top: 6px; }
   .meta { font-size: 12px; color: var(--ink-2); margin-top: 14px; }
+  .stale {
+    margin-top: 12px; padding: 10px 14px; border-radius: 10px; font-size: 13px;
+    border: 1px solid var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--ink);
+  }
+  .stale a { font-weight: 600; }
 
   /* Simulador */
   .field { margin-bottom: 14px; }
@@ -263,6 +268,7 @@
         </div>
       </div>
       <div class="meta" id="state-meta"></div>
+      <div class="stale" id="stale-note" hidden></div>
     </section>
 
     <!-- Simulador -->
@@ -389,6 +395,17 @@
     { n: "5 · Desligado",         t: 0x23, u: 0x0E, l: 0x20, en: false },
   ];
 
+  const LEITURA_ANTIGA_MS = 10 * 60 * 1000; // acima disso o painel avisa que a leitura é antiga
+  function haQuanto(ms) {
+    const min = Math.max(0, Math.floor(ms / 60000));
+    if (min < 1) return "agora há pouco";
+    if (min < 60) return `há ${min} min`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `há ${h} h`;
+    const d = Math.floor(h / 24);
+    return d === 1 ? "há 1 dia" : `há ${d} dias`;
+  }
+
   const $ = (id) => document.getElementById(id);
   const fmt = (n, d = 1) => Number(n).toLocaleString("pt-BR", { maximumFractionDigits: d, minimumFractionDigits: 0 });
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -480,6 +497,7 @@
   }
   function renderCurrent(r) {
     if (!r) {
+      $("stale-note").hidden = true;
       setLeds("led", null);
       $("state-title").textContent = "—";
       $("state-desc").textContent = "Nenhuma leitura registrada ainda. Envie uma pelo simulador.";
@@ -500,7 +518,16 @@
     setGauge("g-temp", "l-temp", r.temperatura, -10, 60, LIM.temp);
     setGauge("g-umid", "l-umid", r.umidade, 0, 100, LIM.umid);
     setGauge("g-luz", "l-luz", r.luminosidade, 0, 100, LIM.luz);
-    $("state-meta").textContent = `Leitura #${r.id} · ${new Date(r.criado_em).toLocaleString("pt-BR")}`;
+    const idade = Date.now() - new Date(r.criado_em).getTime();
+    $("state-meta").textContent = `Leitura #${r.id} · ${new Date(r.criado_em).toLocaleString("pt-BR")} · ${haQuanto(idade)}`;
+    const nota = $("stale-note");
+    if (idade > LEITURA_ANTIGA_MS) {
+      nota.hidden = false;
+      nota.innerHTML = `Esta é uma leitura antiga (${haQuanto(idade)}). A estação não enviou dados recentes. ` +
+        `Use o <a href="#t-sim">simulador</a> para enviar uma leitura nova.`;
+    } else {
+      nota.hidden = true;
+    }
   }
 
   function renderChart(items) {
